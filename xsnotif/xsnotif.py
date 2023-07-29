@@ -99,9 +99,9 @@ class Notifier:
             icon=icon,
             audio_path=audio_path,
             height=Notification.DEFAULT_HEIGHT if height is None else height,
-            opacity=Notification.DEFAULT_OPACITY if height is None else opacity,
-            timeout=Notification.DEFAULT_TIMEOUT if height is None else timeout,
-            volume=Notification.DEFAULT_VOLUME if height is None else volume,
+            opacity=Notification.DEFAULT_OPACITY if opacity is None else opacity,
+            timeout=Notification.DEFAULT_TIMEOUT if timeout is None else timeout,
+            volume=Notification.DEFAULT_VOLUME if volume is None else volume,
             message_type=message_type,
             index=index,
             use_base64_icon=use_base64_icon
