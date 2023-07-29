@@ -1,1 +1,1 @@
-from xsnotif import *
+from .xsnotif import *
