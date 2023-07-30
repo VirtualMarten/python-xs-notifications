@@ -51,6 +51,7 @@ class Notification:
 
 class Notifier:
     def worker(notifier: 'Notifier'):
+        notifier.client_socket.connect(('localhost', notifier.port))
         while notifier.running:
             if len(notifier.queue):
                 notif = notifier.queue.pop(0)
@@ -65,7 +66,7 @@ class Notifier:
         self.worker_thread = Thread(target=Notifier.worker, args=(self,))
         self.worker_thread.daemon = True
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.client_socket.settimeout(None)
+        self.client_socket.settimeout(1)
         self.polling_rate = polling_rate
 
     def start(self):
