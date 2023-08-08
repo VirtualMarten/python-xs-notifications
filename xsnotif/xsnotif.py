@@ -59,6 +59,8 @@ class Notifier:
                 notif: Notification = notifier.queue.pop(0)
                 if notif.timeout is None:
                     notif.timeout = notifier.reading_time(notif.title, notif.content)
+                if notif.volume == 0:
+                    notif.audio_path = ''
                 notifier.client_socket.send(notif.as_json_bytes())
             notifier.stop_event.wait(notifier.polling_rate)
         notifier.client_socket.close()
