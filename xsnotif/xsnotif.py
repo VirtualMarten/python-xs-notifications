@@ -1,10 +1,9 @@
 from typing import List, ClassVar, Optional
 import socket
 from dataclasses import dataclass
-from threading import Thread
+from threading import Thread, Event
 import json
 from enum import IntEnum
-from time import sleep
 
 class MessageType(IntEnum):
     NOTIFICATION = 1
@@ -52,16 +51,16 @@ class Notification:
 class Notifier:
     def worker(notifier: 'Notifier'):
         notifier.client_socket.connect(('localhost', notifier.port))
-        while notifier.running:
+        while not notifier.stop_event.isSet():
             if len(notifier.queue):
                 notif = notifier.queue.pop(0)
                 notifier.client_socket.send(notif.as_json_bytes())
-            sleep(notifier.polling_rate)
+            notifier.stop_event.wait(notifier.polling_rate)
         notifier.client_socket.close()
 
     def __init__(self, port: int = 42069, *, polling_rate: float = 5):
         self.port: int = port
-        self.running: bool = False
+        self.stop_event: Event = Event()
         self.queue: List[Notification] = []
         self.worker_thread = Thread(target=Notifier.worker, args=(self,))
         self.worker_thread.daemon = True
@@ -70,11 +69,11 @@ class Notifier:
         self.polling_rate = polling_rate
 
     def start(self):
-        self.running = True
+        self.stop_event.clear()
         self.worker_thread.start()
 
     def stop(self):
-        self.running = False
+        self.stop_event.set()
         self.worker_thread.join()
 
     def send(self, notif: Notification):
