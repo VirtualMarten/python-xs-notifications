@@ -12,13 +12,13 @@ class MessageType(IntEnum):
     NOTIFICATION = 1
     MEDIA_PLAYER = 2
 
+DEFAULT_HEIGHT:  float = 175
+DEFAULT_OPACITY: float = 1
+DEFAULT_TIMEOUT: float = 3
+DEFAULT_VOLUME:  float = 0.7
+
 @dataclass
 class Notification:
-    DEFAULT_HEIGHT:     ClassVar[float] = 175
-    DEFAULT_OPACITY:    ClassVar[float] = 1
-    DEFAULT_TIMEOUT:    ClassVar[float] = 3
-    DEFAULT_VOLUME:     ClassVar[float] = 0.7
-
     title: str
     content: str
     source_app: str = ''
@@ -57,7 +57,7 @@ class Notifier:
         while not notifier.stop_event.isSet():
             if len(notifier.queue):
                 notif: Notification = notifier.queue.pop(0)
-                if notif.timeout is None:
+                if notif.timeout == 0:
                     notif.timeout = notifier.reading_time(notif.title, notif.content)
                 if notif.volume == 0:
                     notif.audio_path = ''
@@ -65,7 +65,16 @@ class Notifier:
             notifier.stop_event.wait(notifier.polling_rate)
         notifier.client_socket.close()
 
-    def __init__(self, port: int = 42069, *, polling_rate: float = 5, reading_time_wpm: float = 255):
+    def __init__(self, port: int = 42069, *,
+                 polling_rate: float = 5,
+                 reading_time_wpm: float = 255,
+                 default_opacity: float = DEFAULT_OPACITY,
+                 default_height: float = DEFAULT_HEIGHT,
+                 default_volume: float = DEFAULT_VOLUME,
+                 default_timeout: float = 0,
+                 default_audio_path: str = 'default',
+                 default_icon_path: str = 'default'
+                 ):
         self.port: int = port
         self.stop_event: Event = Event()
         self.queue: List[Notification] = []
@@ -75,6 +84,12 @@ class Notifier:
         self.client_socket.settimeout(1)
         self.polling_rate = polling_rate
         self.reading_time_wpm = reading_time_wpm
+        self.default_opacity = default_opacity
+        self.default_height = default_height
+        self.default_volume = default_volume
+        self.default_timeout = default_timeout
+        self.default_audio_path = default_audio_path
+        self.default_icon_path = default_icon_path
 
     def reading_time(self, *text: str) -> float:
         text = ' '.join(text)
@@ -97,8 +112,8 @@ class Notifier:
             title: str,
             content: str,
             source_app: str = '',
-            icon: str = 'default',
-            audio_path: str = 'default',
+            icon: Optional[str] = None,
+            audio_path: Optional[str] = None,
             height: Optional[float] = None,
             opacity: Optional[float] = None,
             timeout: Optional[float] = None,
@@ -112,12 +127,12 @@ class Notifier:
             title=title,
             content=content,
             source_app=source_app,
-            icon=icon,
-            audio_path=audio_path,
-            height=Notification.DEFAULT_HEIGHT if height is None else height,
-            opacity=Notification.DEFAULT_OPACITY if opacity is None else opacity,
-            timeout=timeout,
-            volume=Notification.DEFAULT_VOLUME if volume is None else volume,
+            icon=self.default_icon_path if icon is None else icon,
+            audio_path=self.default_audio_path if audio_path is None else audio_path,
+            height=self.default_height if height is None else height,
+            opacity=self.default_opacity if opacity is None else opacity,
+            timeout=self.default_timeout if timeout is None else timeout,
+            volume=self.default_volume if volume is None else volume,
             message_type=message_type,
             index=index,
             use_base64_icon=use_base64_icon
