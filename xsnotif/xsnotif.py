@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from threading import Thread, Event
 import json
 from enum import IntEnum
+import re
+
+re_word = re.compile(r'\w+')
 
 class MessageType(IntEnum):
     NOTIFICATION = 1
@@ -53,12 +56,14 @@ class Notifier:
         notifier.client_socket.connect(('localhost', notifier.port))
         while not notifier.stop_event.isSet():
             if len(notifier.queue):
-                notif = notifier.queue.pop(0)
+                notif: Notification = notifier.queue.pop(0)
+                if notif.timeout is None:
+                    notif.timeout = notifier.reading_time(notif.title, notif.content)
                 notifier.client_socket.send(notif.as_json_bytes())
             notifier.stop_event.wait(notifier.polling_rate)
         notifier.client_socket.close()
 
-    def __init__(self, port: int = 42069, *, polling_rate: float = 5):
+    def __init__(self, port: int = 42069, *, polling_rate: float = 5, reading_time_wpm: float = 255):
         self.port: int = port
         self.stop_event: Event = Event()
         self.queue: List[Notification] = []
@@ -67,6 +72,13 @@ class Notifier:
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.client_socket.settimeout(1)
         self.polling_rate = polling_rate
+        self.reading_time_wpm = reading_time_wpm
+
+    def reading_time(self, *text: str) -> float:
+        text = ' '.join(text)
+        count = len(re_word.findall(text))
+        seconds = count / (self.reading_time_wpm / 60)
+        return max(seconds, 2)
 
     def start(self):
         self.stop_event.clear()
@@ -102,7 +114,7 @@ class Notifier:
             audio_path=audio_path,
             height=Notification.DEFAULT_HEIGHT if height is None else height,
             opacity=Notification.DEFAULT_OPACITY if opacity is None else opacity,
-            timeout=Notification.DEFAULT_TIMEOUT if timeout is None else timeout,
+            timeout=timeout,
             volume=Notification.DEFAULT_VOLUME if volume is None else volume,
             message_type=message_type,
             index=index,
