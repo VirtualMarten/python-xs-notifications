@@ -17,6 +17,9 @@ DEFAULT_OPACITY: float = 1
 DEFAULT_TIMEOUT: float = 3
 DEFAULT_VOLUME:  float = 0.7
 
+TITLE_MAX: int = 64
+CONTENT_MAX: int = 400
+
 @dataclass
 class Notification:
     title: str
@@ -51,6 +54,12 @@ class Notification:
     def as_json_bytes(self) -> bytes:
         return bytes(self.as_json(), 'UTF-8')
 
+def truncate_text(text: str, max: int) -> str:
+    l = len(text)
+    if l > max:
+        return text[:max - 3] + '...'
+    return text
+
 class Notifier:
     def worker(notifier: 'Notifier'):
         notifier.client_socket.connect(('localhost', notifier.port))
@@ -61,6 +70,8 @@ class Notifier:
                     notif.timeout = notifier.reading_time(notif.title, notif.content)
                 if notif.volume == 0:
                     notif.audio_path = ''
+                notif.title = truncate_text(notif.title, TITLE_MAX)
+                notif.content = truncate_text(notif.content, CONTENT_MAX)
                 notifier.client_socket.send(notif.as_json_bytes())
             notifier.stop_event.wait(notifier.polling_rate)
         notifier.client_socket.close()
